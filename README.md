@@ -24,7 +24,7 @@ const input = JSON.stringify({
   },
 });
 
-const redacted = jsonRedactor(['name'], input);
+const redacted = jsonRedactor(['name', 'secret'], input);
 /*
 redacted is now: 
 {

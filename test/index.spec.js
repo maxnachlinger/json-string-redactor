@@ -40,10 +40,12 @@ describe("index.js tests", () => {
   });
 
   it('redacts multiple nested keys', () => {
-    const input = {
+    const json = JSON.stringify({
       name: 'Test0',
+      prop0: 'I should not be redacted',
       child: {
         name: 'Test1',
+        prop1: 'I should not be redacted either',
         child: {
           name: 'Test2',
           child: {
@@ -52,9 +54,8 @@ describe("index.js tests", () => {
           },
         },
       },
-    };
-    const json = JSON.stringify(input);
+    });
     const redacted = jsonRedactor(['name', 'secret'], json);
-    expect(redacted).toBe('{"name":"*****","child":{"name":"*****","child":{"name":"*****","child":{"name":"*****","secret":"****************"}}}}');
+    expect(redacted).toBe('{"name":"*****","prop0":"I should not be redacted","child":{"name":"*****","prop1":"I should not be redacted either","child":{"name":"*****","child":{"name":"*****","secret":"****************"}}}}');
   });
 });

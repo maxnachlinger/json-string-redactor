@@ -12,8 +12,10 @@ const jsonRedactor = require('json-string-redactor');
 
 const input = JSON.stringify({
   name: 'Test0',
+  prop0: 'I should not be redacted',
   child: {
     name: 'Test1',
+    prop1: 'I should not be redacted either',
     child: {
       name: 'Test2',
       child: {
@@ -29,8 +31,10 @@ const redacted = jsonRedactor(['name', 'secret'], input);
 redacted is now: 
 {
   "name": "*****",
+  "prop0": "I should not be redacted",
   "child": {
     "name": "*****",
+    "prop1": "I should not be redacted either",
     "child": {
       "name": "*****",
       "child": {

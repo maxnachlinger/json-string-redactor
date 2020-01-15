@@ -1,0 +1,23 @@
+{
+  "name": "json-string-redactor",
+  "version": "0.0.1",
+  "description": "Redacts JSON string values for specified keys",
+  "main": "index.js",
+  "scripts": {
+    "build": "node-gyp build",
+    "install": "node-gyp rebuild",
+    "pretest": "npm run install",
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bindings": "1.5.0",
+    "node-addon-api": "2.0.0"
+  },
+  "gypfile": true,
+  "devDependencies": {
+    "jest": "24.9.0"
+  }
+}

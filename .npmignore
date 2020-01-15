@@ -1,0 +1,6 @@
+.idea
+test
+build
+.npmignore
+.travis.yml
+.gitignore

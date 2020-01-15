@@ -2,6 +2,11 @@
 
 > Redacts JSON string values for specified keys 
 
+[![travis][travis-image]][travis-url]
+
+[travis-image]: https://travis-ci.org/maxnachlinger/json-string-redactor.svg?branch=master
+[travis-url]: https://travis-ci.org/maxnachlinger/json-string-redactor
+
 ```
 npm i json-string-redactor
 ```

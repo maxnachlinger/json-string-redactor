@@ -6,41 +6,34 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <set>
+#include <unordered_set>
 #include <iterator>
 #include <napi.h>
 
 using namespace rapidjson;
+using namespace std;
 
 // This handler forwards event into an output handler
-
-template <typename OutputHandler>
-class FilterKeyHandler {
-public:
+template<typename OutputHandler>
+struct FilterKeyHandler {
+    FilterKeyHandler(OutputHandler& outputHandler, unordered_set<string>* keysToRedact) :
+        out_(outputHandler), keysToRedact_(keysToRedact), buffer_(), redact_()
+    {}
     typedef char Ch;
 
-    FilterKeyHandler(OutputHandler& outputHandler, const std::set<std::string>* keysToRedact) :
-        outputHandler_(outputHandler), keysToRedact_(keysToRedact), buffer_(), redact_()
-    {}
-
-    bool Null() { redact_ = false; return outputHandler_.Null(); }
-    bool Bool(bool b) { redact_ = false; return outputHandler_.Bool(b); }
-    bool Int(int i) { redact_ = false; return outputHandler_.Int(i); }
-    bool Uint(unsigned u) { redact_ = false; return outputHandler_.Uint(u); }
-    bool Int64(int64_t i) { redact_ = false; return outputHandler_.Int64(i); }
-    bool Uint64(uint64_t u) { redact_ = false; return outputHandler_.Uint64(u); }
-    bool Double(double d) { redact_ = false; return outputHandler_.Double(d); }
-    bool RawNumber(const char* str, SizeType length, bool copy) { return outputHandler_.RawNumber(str, length, copy); }
-    bool StartObject() { redact_ = false; return outputHandler_.StartObject(); }
-    bool EndObject(SizeType memberCount) { return outputHandler_.EndObject(memberCount); }
-    bool StartArray() { redact_ = false; return outputHandler_.StartArray(); }
-    bool EndArray(SizeType elementCount) { return outputHandler_.EndArray(elementCount); }
+    bool Null() { return out_.Null(); }
+    bool Bool(bool b) { return out_.Bool(b); }
+    bool Int(int i) { return out_.Int(i); }
+    bool Uint(unsigned u) { return out_.Uint(u); }
+    bool Int64(int64_t i) { return out_.Int64(i); }
+    bool Uint64(uint64_t u) { return out_.Uint64(u); }
+    bool Double(double d) { return out_.Double(d); }
 
     // if we're redacting the current key, replace the string value with an equivalent amount of *'s
     // e.g. redacting "name" key: -> "test" -> "****"
     bool String(const Ch* str, SizeType len, bool copy) {
         if (redact_ == false) {
-            return outputHandler_.String(str, len, copy);
+            return out_.String(str, len, copy);
         }
 
         redact_ = false;
@@ -49,23 +42,25 @@ public:
         for (SizeType i = 0; i < len; i++) {
             buffer_.push_back('*');
         }
-        return outputHandler_.String(&buffer_.front(), len, true);
+        return out_.String(&buffer_.front(), len, true);
     }
 
     bool Key(const Ch* str, SizeType len, bool copy) {
-        // we'll redact if this key is in our set of keysToRedact_
+        // is this key in our set to redact?
         redact_ = keysToRedact_->find(str) != keysToRedact_->end();
-        return outputHandler_.Key(str, len, copy);
+        return out_.Key(str, len, copy);
     }
 
-    std::vector<char> buffer_;
-    bool redact_;
+    bool StartObject() { return out_.StartObject(); }
+    bool EndObject(SizeType memberCount) { return out_.EndObject(memberCount); }
+    bool StartArray() { return out_.StartArray(); }
+    bool EndArray(SizeType elementCount) { return out_.EndArray(elementCount); }
+    bool RawNumber (const Ch *str, SizeType length, bool copy=false)  { return out_.RawNumber(str, length, copy); }
 
-private:
-    FilterKeyHandler(const FilterKeyHandler&);
-    FilterKeyHandler& operator=(const FilterKeyHandler&);
-    OutputHandler& outputHandler_;
-    const std::set<std::string>* keysToRedact_;
+    OutputHandler& out_;
+    unordered_set<string>* keysToRedact_;
+    vector<char> buffer_;
+    bool redact_;
 };
 
 Napi::String redactJSONKeyStringValues(const Napi::CallbackInfo& info) {
@@ -76,11 +71,9 @@ Napi::String redactJSONKeyStringValues(const Napi::CallbackInfo& info) {
       .ThrowAsJavaScriptException();
   }
 
-  // fill keysToRedact
+  unordered_set<string> keysToRedact;
   Napi::Array keysToRedactArray = info[0].As<Napi::Array>();
   unsigned int length = keysToRedactArray.Length();
-
-  std::set<std::string> keysToRedact;
 
   for (unsigned int i = 0; i < length; i++) {
     keysToRedact.insert(keysToRedactArray.Get(i).ToString());
@@ -94,7 +87,7 @@ Napi::String redactJSONKeyStringValues(const Napi::CallbackInfo& info) {
   StringBuffer outputStream;
   Writer<StringBuffer> writer(outputStream);
 
-  FilterKeyHandler<Writer<StringBuffer> > filter(writer, &keysToRedact);
+  FilterKeyHandler<Writer<StringBuffer>> filter(writer, &keysToRedact);
   if (!reader.Parse(inputStream, filter)) {
     Napi::TypeError::New(env, "Could not parse JSON.")
       .ThrowAsJavaScriptException();
